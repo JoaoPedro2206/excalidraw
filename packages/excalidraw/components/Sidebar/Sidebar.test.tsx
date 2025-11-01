@@ -152,6 +152,102 @@ describe("Sidebar", () => {
         expect(node).toBe(null);
       });
     });
+
+    it("should close sidebar when clicking outside (not docked)", async () => {
+      const { container } = await render(
+        <Excalidraw
+          initialData={{ appState: { openSidebar: { name: "customSidebar" } } }}
+        >
+          <Sidebar name="customSidebar" docked={false}>
+            <div id="test-sidebar-content">Sidebar Content</div>
+          </Sidebar>
+        </Excalidraw>,
+      );
+
+      await waitFor(() => {
+        expect(container.querySelector("#test-sidebar-content")).not.toBe(null);
+      });
+
+      fireEvent.pointerDown(document.body);
+
+      await waitFor(() => {
+        expect(container.querySelector("#test-sidebar-content")).toBe(null);
+      });
+    });
+
+    it("should NOT close sidebar when clicking on sidebar trigger", async () => {
+      const { container } = await render(
+        <Excalidraw
+          initialData={{ appState: { openSidebar: { name: "customSidebar" } } }}
+        >
+          <div className="sidebar-trigger" data-testid="trigger-button">
+            Trigger
+          </div>
+          <Sidebar name="customSidebar" docked={false}>
+            <div id="test-sidebar-content">Sidebar Content</div>
+          </Sidebar>
+        </Excalidraw>,
+      );
+
+      await waitFor(() => {
+        expect(container.querySelector("#test-sidebar-content")).not.toBe(null);
+      });
+
+      const trigger = container.querySelector(".sidebar-trigger")!;
+      fireEvent.pointerDown(trigger);
+
+      await waitFor(() => {
+        expect(container.querySelector("#test-sidebar-content")).not.toBe(null);
+      });
+    });
+
+    it("should NOT close docked sidebar when clicking outside if canFitSidebar", async () => {
+      const { container } = await render(
+        <Excalidraw
+          initialData={{ appState: { openSidebar: { name: "customSidebar" } } }}
+        >
+          <Sidebar name="customSidebar" docked={true}>
+            <div id="test-sidebar-content">Sidebar Content</div>
+          </Sidebar>
+        </Excalidraw>,
+      );
+
+      await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+        await waitFor(() => {
+          expect(container.querySelector("#test-sidebar-content")).not.toBe(null);
+        });
+
+        fireEvent.pointerDown(document.body);
+
+        await waitFor(() => {
+          expect(container.querySelector("#test-sidebar-content")).not.toBe(null);
+        });
+      });
+    });
+
+    it("should call onStateChange when sidebar opens/closes", async () => {
+      const onStateChange = vi.fn();
+      
+      await render(
+        <Excalidraw>
+          <Sidebar name="customSidebar" onStateChange={onStateChange}>
+            <div id="test-sidebar-content">Sidebar Content</div>
+          </Sidebar>
+        </Excalidraw>,
+      );
+
+      expect(await toggleSidebar({ name: "customSidebar" })).toBe(true);
+      
+      await waitFor(() => {
+        expect(onStateChange).toHaveBeenCalledWith({ name: "customSidebar" });
+      });
+
+      expect(await toggleSidebar({ name: "customSidebar" })).toBe(false);
+      
+      await waitFor(() => {
+        expect(onStateChange).toHaveBeenCalledWith(null);
+      });
+    });
   });
 
   describe("<Sidebar.Header/>", () => {
